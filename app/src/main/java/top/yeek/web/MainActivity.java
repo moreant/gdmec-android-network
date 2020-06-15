@@ -1,75 +1,90 @@
 package top.yeek.web;
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.TextView;
-
-import androidx.appcompat.app.AppCompatActivity;
-
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-public class MainActivity extends AppCompatActivity {
-    private Button mButton1;
-    private TextView mTextView1;
-    private ImageView mImageView1;
-    String uriPic = "https://www.baidu.com/img/baidu_sylogo1.gif";
+import android.app.Activity;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.webkit.WebView;
+import android.widget.Button;
+import android.widget.EditText;
 
-    /**
-     * Called when the activity is first created.
-     */
-    @Override
+import top.yeek.web.R;
+
+public class MainActivity extends Activity {
+    private EditText mEdit = null;
+    private Button mButton = null;
+    private WebView mWeb = null;
+
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mButton1 = (Button) findViewById(R.id.myButton1);
-        mTextView1 = (TextView) findViewById(R.id.myTextView1);
-        mImageView1 = (ImageView) findViewById(R.id.myImageView1);
+        mEdit = (EditText)findViewById(R.id.myEdit1);
+        mButton = (Button)findViewById(R.id.myButton1);
+        mWeb = (WebView)findViewById(R.id.myWeb1);
 
-        mButton1.setOnClickListener(new Button.OnClickListener() {
-            @Override
-            public void onClick(View arg0) {
-                /* 设定Bitmap于ImageView中 */
-                mImageView1.setImageBitmap(getURLBitmap());
-                mTextView1.setText("");
+        mWeb.getSettings().setJavaScriptEnabled(true);
+        //mWeb.getSettings().setPluginsEnabled(true);
 
+        mButton.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+                //String strUrl = mEdit.getText().toString();
+                String strUrl = "https://webadvisor.ashland.edu/";
+                String strFile = "/sdcard/test.html";
+                if (!strUrl.startsWith("https://")) {
+                    strUrl = "https://" + strUrl;
+                }
+                getStaticPageByBytes(strUrl, strFile);
+                mWeb.loadUrl("file://" + strFile);
             }
         });
     }
 
-    public Bitmap getURLBitmap() {
-        URL imageUrl = null;
-        Bitmap bitmap = null;
+    private void getStaticPageByBytes(String surl, String strFile){
+
+        Log.i("getStaticPageByBytes", surl + ", " + strFile);
+
+        HttpURLConnection connection = null;
+        InputStream is = null;
+
+        File file = new File(strFile);
+        FileOutputStream fos = null;
+
         try {
-            /* new URL对象将网址传入 */
-            imageUrl = new URL(uriPic);
+            URL url = new URL(surl);
+            connection = (HttpURLConnection)url.openConnection();
+
+            int code = connection.getResponseCode();
+            if (HttpURLConnection.HTTP_OK == code) {
+                connection.connect();
+                is = connection.getInputStream();
+                fos = new FileOutputStream(file);
+
+                int i;
+                while((i = is.read()) != -1){
+                    fos.write(i);
+                }
+
+                is.close();
+                fos.close();
+            }
         } catch (MalformedURLException e) {
             e.printStackTrace();
-        }
-        try {
-            /* 取得联机 */
-            HttpURLConnection conn = (HttpURLConnection) imageUrl
-                    .openConnection();
-            conn.connect();
-            /* 取得回传的InputStream */
-            InputStream is = conn.getInputStream();
-            /* 将InputStream变成Bitmap */
-            bitmap = BitmapFactory.decodeStream(is);
-            /* 关闭InputStream */
-            is.close();
-
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
         }
-        return bitmap;
     }
-
 }
